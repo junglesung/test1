@@ -97,15 +97,17 @@
       const t = count === 1 ? 0.5 : i / (count - 1);
       const x = marginX + usableW * (0.35 + t * 0.55);
       const y = state.height * (0.28 + (i % 2) * 0.38 + rand(-0.04, 0.04));
-      const turretCount = 4;
-      const turrets = [];
-      for (let tIdx = 0; tIdx < turretCount; tIdx++) {
-        turrets.push({
-          offset: ((tIdx / turretCount) * Math.PI * 2) - Math.PI / 2,
-          spin: rand(0.7, 1.2) * (tIdx % 2 === 0 ? 1 : -1),
-          cooldown: rand(0.2, TURRET_COOLDOWN),
-        });
-      }
+      // 四門砲固定方向：前、後、左、右
+      const fixedDirs = [
+        { angle: -Math.PI / 2, label: "前" }, // 往前
+        { angle: Math.PI / 2, label: "後" },  // 往後
+        { angle: Math.PI, label: "左" },      // 往左
+        { angle: 0, label: "右" },            // 往右
+      ];
+      const turrets = fixedDirs.map((dir) => ({
+        angle: dir.angle,
+        cooldown: rand(0.2, TURRET_COOLDOWN),
+      }));
       list.push({
         x,
         y,
@@ -364,13 +366,12 @@
       }
 
       for (const turret of c.turrets) {
-        turret.offset += turret.spin * dt;
         turret.cooldown -= dt;
         if (turret.cooldown <= 0) {
           turret.cooldown = TURRET_COOLDOWN;
-          const tx = c.x + Math.cos(turret.offset) * (CASTLE_RADIUS * 0.78);
-          const ty = c.y + Math.sin(turret.offset) * (CASTLE_RADIUS * 0.78);
-          addLaserBeam(tx, ty, turret.offset, false, 280);
+          const tx = c.x + Math.cos(turret.angle) * (CASTLE_RADIUS * 0.78);
+          const ty = c.y + Math.sin(turret.angle) * (CASTLE_RADIUS * 0.78);
+          addLaserBeam(tx, ty, turret.angle, false, 280);
         }
       }
     }
@@ -597,13 +598,13 @@
       ctx.fillRect(4, -3, 22, 6);
       ctx.restore();
 
-      // 一排旋轉砲
+      // 固定方向砲：前、後、左、右
       for (const turret of c.turrets) {
-        const tx = Math.cos(turret.offset) * (c.radius * 0.78);
-        const ty = Math.sin(turret.offset) * (c.radius * 0.78);
+        const tx = Math.cos(turret.angle) * (c.radius * 0.78);
+        const ty = Math.sin(turret.angle) * (c.radius * 0.78);
         ctx.save();
         ctx.translate(tx, ty);
-        ctx.rotate(turret.offset);
+        ctx.rotate(turret.angle);
         ctx.fillStyle = "#334155";
         ctx.beginPath();
         ctx.arc(0, 0, 6, 0, Math.PI * 2);
