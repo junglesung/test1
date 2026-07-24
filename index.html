@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>空中堡壘</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;800&family=Oxanium:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <h1>空中堡壘</h1>
+      </div>
+      <div class="hud" id="hud" hidden>
+        <span id="castleCount">城堡 0</span>
+        <span id="timeCount">時間 0</span>
+      </div>
+    </header>
+
+    <main class="stage">
+      <canvas id="game" width="960" height="640" aria-label="空中堡壘遊戲畫面"></canvas>
+
+      <section id="overlay" class="overlay">
+        <div class="panel">
+          <p class="eyebrow">點擊開始</p>
+          <h2 id="overlayTitle">空中堡壘</h2>
+          <p id="overlayMsg" class="lead">
+            操控飛機穿越城堡防線。每個城堡都有坦克與旋轉砲，敵機會從四面八方飛來。
+            被擊中一次即失敗；摧毀全部城堡即勝利。
+          </p>
+          <ul class="rules">
+            <li>雷射：無限，前方準線直線射擊</li>
+            <li>巨型炸彈：無限，清除所有子彈並四向發射雷射</li>
+            <li>防護衣：無限，但被擊中時無效</li>
+            <li>坦克射速 2.5 倍；旋轉砲發射雷射（不清除子彈）</li>
+          </ul>
+          <button type="button" id="startBtn" class="cta">開始任務</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="controls" id="controls" hidden>
+      <button type="button" id="laserBtn" class="weapon active" data-weapon="laser">
+        <span class="key">雷射</span>
+        <span class="hint">準線射擊 · 無限</span>
+      </button>
+      <button type="button" id="bombBtn" class="weapon" data-weapon="bomb">
+        <span class="key">巨型炸彈</span>
+        <span class="hint">清子彈 · 無限</span>
+      </button>
+      <button type="button" id="suitBtn" class="weapon" data-weapon="suit">
+        <span class="key">防護衣</span>
+        <span class="hint">無效防護 · 無限</span>
+      </button>
+    </footer>
+  </div>
+  <script src="js/game.js"></script>
+</body>
+</html>
