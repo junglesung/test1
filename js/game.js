@@ -309,7 +309,7 @@
     state.particles = [];
     state.bombFlash = 0;
     state.aimPulse = 0;
-    state.lastEnemySpawn = 0;
+    state.lastEnemySpawn = -CASTLE_FIRE_GRACE;
     state.player = createPlayer();
     state.castles = createCastles();
     state.pointer.x = state.player.x + 80;
