@@ -20,9 +20,19 @@
   const CASTLE_RADIUS = CASTLE_DIAMETER / 2;
   /** 玩家飛行：約 5 秒抵達一座城堡的距離 */
   const PLAYER_SPEED = 2.4;
-  /** 砲台射速調為最慢 */
-  const TANK_COOLDOWN = 5.5;
-  const TURRET_COOLDOWN = 7;
+  /** 我方炮射速 2.5 倍；敵方炮射速 0.5 倍（最慢） */
+  const PLAYER_FIRE_MULT = 2.5;
+  const ENEMY_FIRE_MULT = 0.5;
+  const BASE_PLAYER_LASER_COOLDOWN = 0.45;
+  const BASE_PLAYER_BOMB_COOLDOWN = 2.125;
+  const BASE_TANK_COOLDOWN = 1.1;
+  const BASE_TURRET_COOLDOWN = 1.35;
+  const BASE_ENEMY_PLANE_COOLDOWN = 1.4;
+  const PLAYER_LASER_COOLDOWN = BASE_PLAYER_LASER_COOLDOWN / PLAYER_FIRE_MULT;
+  const PLAYER_BOMB_COOLDOWN = BASE_PLAYER_BOMB_COOLDOWN / PLAYER_FIRE_MULT;
+  const TANK_COOLDOWN = BASE_TANK_COOLDOWN / ENEMY_FIRE_MULT;
+  const TURRET_COOLDOWN = BASE_TURRET_COOLDOWN / ENEMY_FIRE_MULT;
+  const ENEMY_PLANE_COOLDOWN = BASE_ENEMY_PLANE_COOLDOWN / ENEMY_FIRE_MULT;
   /** 開局短暫不開火，避免玩家一出現就被打掉 */
   const CASTLE_FIRE_GRACE = 3;
   const ENEMY_SPAWN_INTERVAL = 2.2;
@@ -148,7 +158,7 @@
       angle,
       speed: rand(1.1, 1.9),
       radius: 12,
-      fireCooldown: rand(0.6, 1.6),
+      fireCooldown: CASTLE_FIRE_GRACE + rand(0, ENEMY_PLANE_COOLDOWN * 0.5),
       life: 1,
     });
   }
@@ -221,7 +231,7 @@
   function firePlayerLaser() {
     const p = state.player;
     if (!p || p.fireCooldown > 0) return;
-    p.fireCooldown = 0.18;
+    p.fireCooldown = PLAYER_LASER_COOLDOWN;
     addLaserBeam(p.x, p.y, p.angle, true, 520);
     burstParticles(
       p.x + Math.cos(p.angle) * 18,
@@ -234,7 +244,7 @@
   function fireGiantBomb() {
     const p = state.player;
     if (!p || p.bombCooldown > 0) return;
-    p.bombCooldown = 0.85;
+    p.bombCooldown = PLAYER_BOMB_COOLDOWN;
     state.bombFlash = 0.35;
     clearAllBullets();
     const rays = 16;
@@ -376,7 +386,7 @@
           c.x + Math.cos(c.tankAngle) * muzzle,
           c.y + Math.sin(c.tankAngle) * muzzle,
           c.tankAngle,
-          90,
+          160,
           true,
           "tank",
           c.id
@@ -413,8 +423,8 @@
       e.y += Math.sin(e.angle) * e.speed * 60 * dt;
       e.fireCooldown -= dt;
       if (e.fireCooldown <= 0) {
-        e.fireCooldown = rand(1.1, 1.8);
-        addBullet(e.x, e.y, e.angle, 180, true, "plane");
+        e.fireCooldown = ENEMY_PLANE_COOLDOWN;
+        addBullet(e.x, e.y, e.angle, 140, true, "plane");
       }
 
       if (
