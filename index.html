@@ -30,14 +30,14 @@
           <p class="eyebrow">點擊開始</p>
           <h2 id="overlayTitle">空中堡壘</h2>
           <p id="overlayMsg" class="lead">
-            操控飛機穿越城堡防線。每個城堡中央有坦克與固定四向砲（前、後、左、右），敵機會從四面八方飛來。
+            操控飛機穿越城堡防線。我方炮會以 2.5 倍射速自動發射；城堡中央砲只會往前射子彈，沒有敵方雷射。
             你或敵機的子彈打爆城堡後，該城堡發出的子彈會立刻消失。被擊中一次即失敗；摧毀全部城堡即勝利。
           </p>
           <ul class="rules">
-            <li>我方炮射速 2.5 倍（雷射／巨型炸彈無限）</li>
-            <li>敵方炮射速 0.5 倍（最慢）；城堡中央固定砲向前／後／左／右發射</li>
+            <li>我方炮：自動發射，射速 2.5 倍（雷射無限）</li>
+            <li>敵方中央砲：只往前射，射速 0.5 倍；無敵方雷射</li>
             <li>防護衣：無限，但被擊中時無效</li>
-            <li>巨型炸彈可清除所有子彈並四向發射雷射</li>
+            <li>巨型炸彈：無限，清除所有子彈並四向發射雷射</li>
           </ul>
           <button type="button" id="startBtn" class="cta">開始任務</button>
         </div>
@@ -47,7 +47,7 @@
     <footer class="controls" id="controls" hidden>
       <button type="button" id="laserBtn" class="weapon active" data-weapon="laser">
         <span class="key">雷射</span>
-        <span class="hint">準線射擊 · 無限</span>
+        <span class="hint">自動發射 · 2.5 倍</span>
       </button>
       <button type="button" id="bombBtn" class="weapon" data-weapon="bomb">
         <span class="key">巨型炸彈</span>

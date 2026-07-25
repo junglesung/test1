@@ -26,12 +26,12 @@
   const BASE_PLAYER_LASER_COOLDOWN = 0.45;
   const BASE_PLAYER_BOMB_COOLDOWN = 2.125;
   const BASE_TANK_COOLDOWN = 1.1;
-  const BASE_TURRET_COOLDOWN = 1.35;
   const BASE_ENEMY_PLANE_COOLDOWN = 1.4;
   const PLAYER_LASER_COOLDOWN = BASE_PLAYER_LASER_COOLDOWN / PLAYER_FIRE_MULT;
   const PLAYER_BOMB_COOLDOWN = BASE_PLAYER_BOMB_COOLDOWN / PLAYER_FIRE_MULT;
+  /** 城堡中央砲：只往前射子彈，敵方 0.5 倍射速 */
+  const FORWARD_CANNON_ANGLE = -Math.PI / 2;
   const TANK_COOLDOWN = BASE_TANK_COOLDOWN / ENEMY_FIRE_MULT;
-  const TURRET_COOLDOWN = BASE_TURRET_COOLDOWN / ENEMY_FIRE_MULT;
   const ENEMY_PLANE_COOLDOWN = BASE_ENEMY_PLANE_COOLDOWN / ENEMY_FIRE_MULT;
   /** 開局短暫不開火，避免玩家一出現就被打掉 */
   const CASTLE_FIRE_GRACE = 3;
@@ -107,26 +107,15 @@
       const t = count === 1 ? 0.5 : i / (count - 1);
       const x = marginX + usableW * (0.35 + t * 0.55);
       const y = state.height * (0.28 + (i % 2) * 0.38 + rand(-0.04, 0.04));
-      // 僅保留中間砲台，固定四向：前、後、左、右
-      const fixedDirs = [
-        -Math.PI / 2, // 往前
-        Math.PI / 2,  // 往後
-        Math.PI,      // 往左
-        0,            // 往右
-      ];
-      const turrets = fixedDirs.map((angle) => ({
-        angle,
-        cooldown: CASTLE_FIRE_GRACE + rand(0, 1.5),
-      }));
       list.push({
         id: i,
         x,
         y,
         radius: CASTLE_RADIUS,
         alive: true,
-        tankAngle: rand(0, Math.PI * 2),
-        tankCooldown: CASTLE_FIRE_GRACE + rand(0, 1.2),
-        turrets,
+        // 中央砲固定向前，發射子彈（無雷射）
+        cannonAngle: FORWARD_CANNON_ANGLE,
+        cannonCooldown: CASTLE_FIRE_GRACE + rand(0, 1.2),
         hitFlash: 0,
       });
     }
@@ -363,43 +352,29 @@
     if (p.fireCooldown > 0) p.fireCooldown -= dt;
     if (p.bombCooldown > 0) p.bombCooldown -= dt;
 
-    if (state.pointer.active && state.weapon === "laser") {
-      firePlayerLaser();
-    } else if (state.pointer.active && state.weapon === "bomb") {
-      fireGiantBomb();
-    }
+    // 我方炮自動發射，射速 2.5 倍
+    firePlayerLaser();
   }
 
   function updateCastles(dt) {
-    const p = state.player;
     for (const c of state.castles) {
       if (!c.alive) {
         if (c.hitFlash > 0) c.hitFlash -= dt;
         continue;
       }
-      c.tankAngle = angleTo(c, p);
-      c.tankCooldown -= dt;
-      if (c.tankCooldown <= 0) {
-        c.tankCooldown = TANK_COOLDOWN;
-        const muzzle = CASTLE_RADIUS * 0.55;
+      c.cannonCooldown -= dt;
+      if (c.cannonCooldown <= 0) {
+        c.cannonCooldown = TANK_COOLDOWN;
+        const muzzle = CASTLE_RADIUS * 0.35;
         addBullet(
-          c.x + Math.cos(c.tankAngle) * muzzle,
-          c.y + Math.sin(c.tankAngle) * muzzle,
-          c.tankAngle,
+          c.x + Math.cos(c.cannonAngle) * muzzle,
+          c.y + Math.sin(c.cannonAngle) * muzzle,
+          c.cannonAngle,
           160,
           true,
           "tank",
           c.id
         );
-      }
-
-      for (const turret of c.turrets) {
-        turret.cooldown -= dt;
-        if (turret.cooldown <= 0) {
-          turret.cooldown = TURRET_COOLDOWN;
-          // 從城堡正中央發射
-          addLaserBeam(c.x, c.y, turret.angle, false, 280, c.id);
-        }
       }
     }
   }
@@ -622,27 +597,18 @@
     ctx.fill();
 
     if (c.alive) {
-      // 坦克（可旋轉射擊）
-      ctx.save();
-      ctx.rotate(c.tankAngle);
-      ctx.fillStyle = "#2f3e2f";
-      ctx.fillRect(-10, -8, 20, 16);
-      ctx.fillStyle = "#1f2a1f";
-      ctx.fillRect(4, -3, 22, 6);
-      ctx.restore();
-
-      // 中間固定砲：前、後、左、右四管從中央射出
+      // 中央砲：固定只往前發射子彈
       ctx.fillStyle = "#334155";
       ctx.beginPath();
-      ctx.arc(0, 0, 8, 0, Math.PI * 2);
+      ctx.arc(0, 0, 9, 0, Math.PI * 2);
       ctx.fill();
-      for (const turret of c.turrets) {
-        ctx.save();
-        ctx.rotate(turret.angle);
-        ctx.fillStyle = "#0f766e";
-        ctx.fillRect(4, -2.5, 16, 5);
-        ctx.restore();
-      }
+      ctx.save();
+      ctx.rotate(c.cannonAngle);
+      ctx.fillStyle = "#0f766e";
+      ctx.fillRect(2, -3.5, 20, 7);
+      ctx.fillStyle = "#1f2a1f";
+      ctx.fillRect(18, -2, 8, 4);
+      ctx.restore();
     }
 
     if (c.hitFlash > 0) {
