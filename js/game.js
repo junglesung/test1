@@ -472,19 +472,24 @@
         state.bullets.splice(i, 1);
         continue;
       }
-      if (b.fromEnemy && dist(b, p) < b.radius + p.radius) {
-        hitPlayer();
-        return;
-      }
-      if (!b.fromEnemy) {
+      // 玩家子彈或敵機子彈可打爆城堡；城堡自己的子彈不行
+      if (b.sourceCastleId == null) {
+        let hitCastle = false;
         for (const c of state.castles) {
           if (c.alive && dist(b, c) < c.radius) {
-            destroyCastle(c);
+            destroyCastle(c); // 會立刻清除該城堡發出的子彈
             state.bullets.splice(i, 1);
             checkWin();
+            hitCastle = true;
             break;
           }
         }
+        if (hitCastle) continue;
+      }
+
+      if (b.fromEnemy && dist(b, p) < b.radius + p.radius) {
+        hitPlayer();
+        return;
       }
     }
 
