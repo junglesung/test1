@@ -96,7 +96,7 @@ body {
 
 .stage {
   position: relative;
-  min-height: 0;
+  min-height: min(58vh, 520px);
   border: 2px solid rgba(30, 58, 79, 0.35);
   box-shadow:
     0 12px 40px rgba(20, 40, 70, 0.18),

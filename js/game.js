@@ -20,11 +20,11 @@
   const CASTLE_RADIUS = CASTLE_DIAMETER / 2;
   /** 玩家飛行：約 5 秒抵達一座城堡的距離 */
   const PLAYER_SPEED = 2.4;
-  /** 坦克射速 2.5 倍 */
-  const TANK_FIRE_MULT = 2.5;
-  const BASE_TANK_COOLDOWN = 1.1;
-  const TANK_COOLDOWN = BASE_TANK_COOLDOWN / TANK_FIRE_MULT;
-  const TURRET_COOLDOWN = 1.35;
+  /** 砲台射速調為最慢 */
+  const TANK_COOLDOWN = 5.5;
+  const TURRET_COOLDOWN = 7;
+  /** 開局短暫不開火，避免玩家一出現就被打掉 */
+  const CASTLE_FIRE_GRACE = 3;
   const ENEMY_SPAWN_INTERVAL = 2.2;
 
   const state = {
@@ -106,7 +106,7 @@
       ];
       const turrets = fixedDirs.map((angle) => ({
         angle,
-        cooldown: rand(0.2, TURRET_COOLDOWN),
+        cooldown: CASTLE_FIRE_GRACE + rand(0, 1.5),
       }));
       list.push({
         id: i,
@@ -115,7 +115,7 @@
         radius: CASTLE_RADIUS,
         alive: true,
         tankAngle: rand(0, Math.PI * 2),
-        tankCooldown: rand(0, TANK_COOLDOWN),
+        tankCooldown: CASTLE_FIRE_GRACE + rand(0, 1.2),
         turrets,
         hitFlash: 0,
       });
@@ -183,18 +183,16 @@
   }
 
   function clearCastleProjectiles(castleId) {
-    for (let i = state.bullets.length - 1; i >= 0; i--) {
-      if (state.bullets[i].sourceCastleId === castleId) {
-        const b = state.bullets[i];
+    const keptBullets = [];
+    for (const b of state.bullets) {
+      if (b.sourceCastleId === castleId) {
         burstParticles(b.x, b.y, "#fbbf24", 2);
-        state.bullets.splice(i, 1);
+      } else {
+        keptBullets.push(b);
       }
     }
-    for (let i = state.lasers.length - 1; i >= 0; i--) {
-      if (state.lasers[i].sourceCastleId === castleId) {
-        state.lasers.splice(i, 1);
-      }
-    }
+    state.bullets = keptBullets;
+    state.lasers = state.lasers.filter((l) => l.sourceCastleId !== castleId);
   }
 
   function burstParticles(x, y, color, count) {
@@ -378,7 +376,7 @@
           c.x + Math.cos(c.tankAngle) * muzzle,
           c.y + Math.sin(c.tankAngle) * muzzle,
           c.tankAngle,
-          220,
+          90,
           true,
           "tank",
           c.id
@@ -477,8 +475,9 @@
         let hitCastle = false;
         for (const c of state.castles) {
           if (c.alive && dist(b, c) < c.radius) {
-            destroyCastle(c); // 會立刻清除該城堡發出的子彈
+            // 先移除這發子彈，再清城堡投射物，避免陣列邊改邊掃出錯
             state.bullets.splice(i, 1);
+            destroyCastle(c);
             checkWin();
             hitCastle = true;
             break;
@@ -487,7 +486,7 @@
         if (hitCastle) continue;
       }
 
-      if (b.fromEnemy && dist(b, p) < b.radius + p.radius) {
+      if (b.fromEnemy && state.player && dist(b, p) < b.radius + p.radius) {
         hitPlayer();
         return;
       }
