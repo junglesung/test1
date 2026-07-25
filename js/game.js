@@ -182,16 +182,20 @@
   }
 
   function clearCastleProjectiles(castleId) {
-    const keptBullets = [];
-    for (const b of state.bullets) {
-      if (b.sourceCastleId === castleId) {
+    // 就地過濾，避免在 update 迴圈中整份替換陣列造成索引錯亂當機
+    for (let i = state.bullets.length - 1; i >= 0; i--) {
+      const b = state.bullets[i];
+      if (b && b.sourceCastleId === castleId) {
         burstParticles(b.x, b.y, "#fbbf24", 2);
-      } else {
-        keptBullets.push(b);
+        state.bullets.splice(i, 1);
       }
     }
-    state.bullets = keptBullets;
-    state.lasers = state.lasers.filter((l) => l.sourceCastleId !== castleId);
+    for (let i = state.lasers.length - 1; i >= 0; i--) {
+      const l = state.lasers[i];
+      if (l && l.sourceCastleId === castleId) {
+        state.lasers.splice(i, 1);
+      }
+    }
   }
 
   function burstParticles(x, y, color, count) {
@@ -439,9 +443,15 @@
 
   function updateProjectiles(dt) {
     const p = state.player;
+    const castlesHit = [];
+    let playerHit = false;
 
-    for (let i = state.bullets.length - 1; i >= 0; i--) {
-      const b = state.bullets[i];
+    // 先複製清單再重建，摧毀城堡時清子彈不會打亂正在掃描的索引
+    const bulletsSnapshot = state.bullets.slice();
+    const keptBullets = [];
+
+    for (const b of bulletsSnapshot) {
+      if (!b) continue;
       b.x += b.vx * dt;
       b.y += b.vy * dt;
       b.life -= dt;
@@ -452,18 +462,19 @@
         b.x > state.width + 40 ||
         b.y > state.height + 40
       ) {
-        state.bullets.splice(i, 1);
         continue;
       }
+
       // 玩家子彈或敵機子彈可打爆城堡；城堡自己的子彈不行
       if (b.sourceCastleId == null) {
         let hitCastle = false;
         for (const c of state.castles) {
-          if (c.alive && dist(b, c) < c.radius) {
-            // 先移除這發子彈，再清城堡投射物，避免陣列邊改邊掃出錯
-            state.bullets.splice(i, 1);
-            destroyCastle(c);
-            checkWin();
+          if (
+            c.alive &&
+            !castlesHit.includes(c) &&
+            dist(b, c) < c.radius
+          ) {
+            castlesHit.push(c);
             hitCastle = true;
             break;
           }
@@ -471,38 +482,77 @@
         if (hitCastle) continue;
       }
 
-      if (b.fromEnemy && state.player && dist(b, p) < b.radius + p.radius) {
-        hitPlayer();
-        return;
+      if (!playerHit && b.fromEnemy && p && dist(b, p) < b.radius + p.radius) {
+        playerHit = true;
+        continue;
       }
+
+      keptBullets.push(b);
     }
 
-    for (let i = state.lasers.length - 1; i >= 0; i--) {
-      const l = state.lasers[i];
+    state.bullets = keptBullets;
+
+    const lasersSnapshot = state.lasers.slice();
+    const keptLasers = [];
+    const enemiesToRemove = new Set();
+
+    for (const l of lasersSnapshot) {
+      if (!l) continue;
       l.life -= dt;
       if (!l.damageDone) {
         l.damageDone = true;
         if (l.fromPlayer) {
           for (const c of state.castles) {
-            if (c.alive && segmentHitsCircle(l.x, l.y, l.angle, l.length, c.x, c.y, c.radius * 0.85)) {
-              destroyCastle(c);
+            if (
+              c.alive &&
+              !castlesHit.includes(c) &&
+              segmentHitsCircle(l.x, l.y, l.angle, l.length, c.x, c.y, c.radius * 0.85)
+            ) {
+              castlesHit.push(c);
             }
           }
-          for (let ei = state.enemies.length - 1; ei >= 0; ei--) {
+          for (let ei = 0; ei < state.enemies.length; ei++) {
             const e = state.enemies[ei];
-            if (segmentHitsCircle(l.x, l.y, l.angle, l.length, e.x, e.y, e.radius)) {
-              burstParticles(e.x, e.y, "#64748b", 12);
-              state.enemies.splice(ei, 1);
+            if (
+              e &&
+              segmentHitsCircle(l.x, l.y, l.angle, l.length, e.x, e.y, e.radius)
+            ) {
+              enemiesToRemove.add(e);
             }
           }
-          checkWin();
-        } else if (segmentHitsCircle(l.x, l.y, l.angle, l.length, p.x, p.y, p.radius)) {
-          hitPlayer();
-          return;
+        } else if (
+          !playerHit &&
+          p &&
+          segmentHitsCircle(l.x, l.y, l.angle, l.length, p.x, p.y, p.radius)
+        ) {
+          playerHit = true;
         }
       }
-      if (l.life <= 0) state.lasers.splice(i, 1);
+      if (l.life > 0) keptLasers.push(l);
     }
+
+    state.lasers = keptLasers;
+
+    if (enemiesToRemove.size > 0) {
+      state.enemies = state.enemies.filter((e) => {
+        if (enemiesToRemove.has(e)) {
+          burstParticles(e.x, e.y, "#64748b", 12);
+          return false;
+        }
+        return true;
+      });
+    }
+
+    for (const c of castlesHit) {
+      destroyCastle(c);
+    }
+
+    if (playerHit) {
+      hitPlayer();
+      return;
+    }
+
+    checkWin();
   }
 
   function updateParticles(dt) {
@@ -751,8 +801,12 @@
   function frame(now) {
     const dt = Math.min(0.033, (now - last) / 1000);
     last = now;
-    update(dt);
-    draw();
+    try {
+      update(dt);
+      draw();
+    } catch (err) {
+      console.error("遊戲更新錯誤：", err);
+    }
     requestAnimationFrame(frame);
   }
 
