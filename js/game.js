@@ -109,6 +109,7 @@
         cooldown: rand(0.2, TURRET_COOLDOWN),
       }));
       list.push({
+        id: i,
         x,
         y,
         radius: CASTLE_RADIUS,
@@ -152,7 +153,7 @@
     });
   }
 
-  function addBullet(x, y, angle, speed, fromEnemy, kind) {
+  function addBullet(x, y, angle, speed, fromEnemy, kind, sourceCastleId) {
     state.bullets.push({
       x,
       y,
@@ -162,10 +163,11 @@
       fromEnemy: !!fromEnemy,
       kind: kind || "normal",
       life: 4.5,
+      sourceCastleId: sourceCastleId == null ? null : sourceCastleId,
     });
   }
 
-  function addLaserBeam(x, y, angle, fromPlayer, length) {
+  function addLaserBeam(x, y, angle, fromPlayer, length, sourceCastleId) {
     state.lasers.push({
       x,
       y,
@@ -176,7 +178,23 @@
       life: fromPlayer ? 0.12 : 0.18,
       maxLife: fromPlayer ? 0.12 : 0.18,
       damageDone: false,
+      sourceCastleId: sourceCastleId == null ? null : sourceCastleId,
     });
+  }
+
+  function clearCastleProjectiles(castleId) {
+    for (let i = state.bullets.length - 1; i >= 0; i--) {
+      if (state.bullets[i].sourceCastleId === castleId) {
+        const b = state.bullets[i];
+        burstParticles(b.x, b.y, "#fbbf24", 2);
+        state.bullets.splice(i, 1);
+      }
+    }
+    for (let i = state.lasers.length - 1; i >= 0; i--) {
+      if (state.lasers[i].sourceCastleId === castleId) {
+        state.lasers.splice(i, 1);
+      }
+    }
   }
 
   function burstParticles(x, y, color, count) {
@@ -245,6 +263,7 @@
     if (!castle.alive) return;
     castle.alive = false;
     castle.hitFlash = 0.4;
+    clearCastleProjectiles(castle.id);
     burstParticles(castle.x, castle.y, "#92400e", 30);
     burstParticles(castle.x, castle.y, "#fbbf24", 18);
   }
@@ -361,7 +380,8 @@
           c.tankAngle,
           220,
           true,
-          "tank"
+          "tank",
+          c.id
         );
       }
 
@@ -370,7 +390,7 @@
         if (turret.cooldown <= 0) {
           turret.cooldown = TURRET_COOLDOWN;
           // 從城堡正中央發射
-          addLaserBeam(c.x, c.y, turret.angle, false, 280);
+          addLaserBeam(c.x, c.y, turret.angle, false, 280, c.id);
         }
       }
     }
